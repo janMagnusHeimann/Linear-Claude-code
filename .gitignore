@@ -38,3 +38,7 @@ coverage/
 
 # Codebase analysis cache
 .codebase-cache/
+
+# Electron builder output
+release/
+dist-electron/

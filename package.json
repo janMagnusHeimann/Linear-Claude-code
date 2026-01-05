@@ -2,19 +2,25 @@
   "name": "linear-claude-code",
   "version": "1.0.0",
   "description": "Smart integration between Linear issues and Claude Code - automatically routes issues to relevant code areas and solves them",
-  "main": "dist/index.js",
+  "main": "dist-electron/main.js",
   "bin": {
     "linear-claude": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
+    "build:cli": "tsc",
     "start": "node dist/cli.js",
     "dev": "ts-node src/cli.ts",
     "setup": "ts-node src/setup.ts",
-    "analyze": "ts-node src/commands/analyze.ts",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist dist-electron",
+    "app:dev": "concurrently \"npm run app:vite\" \"npm run app:electron\"",
+    "app:vite": "vite",
+    "app:electron": "wait-on http://localhost:5173 && electron .",
+    "app:build": "vite build && tsc -p tsconfig.electron.json",
+    "app:package": "npm run app:build && electron-builder --mac",
+    "app:package:all": "npm run app:build && electron-builder --mac --win --linux"
   },
   "keywords": [
     "linear",
@@ -23,7 +29,9 @@
     "ai",
     "automation",
     "issue-tracking",
-    "developer-tools"
+    "developer-tools",
+    "desktop-app",
+    "electron"
   ],
   "author": "janMagnusHeimann",
   "license": "MIT",
@@ -40,21 +48,79 @@
     "dotenv": "^16.4.5",
     "yaml": "^2.4.1",
     "openai": "^4.28.0",
-    "tiktoken": "^1.0.13"
+    "tiktoken": "^1.0.13",
+    "electron-store": "^8.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/inquirer": "^9.0.7",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "concurrently": "^8.2.2",
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1",
     "eslint": "^8.56.0",
     "jest": "^29.7.0",
     "@types/jest": "^29.5.12",
+    "lucide-react": "^0.312.0",
+    "postcss": "^8.4.35",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwindcss": "^3.4.1",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vite": "^5.0.12",
+    "wait-on": "^7.2.0"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "build": {
+    "appId": "com.linearclaudecode.app",
+    "productName": "Linear Claude",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist-electron/**/*",
+      "dist/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/icon.svg",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "Linear Claude",
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "win": {
+      "target": ["nsis", "zip"],
+      "icon": "assets/icon.svg"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "icon": "assets/icon.svg",
+      "category": "Development"
+    }
   }
 }

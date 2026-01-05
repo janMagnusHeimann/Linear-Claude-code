@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.linear.app https://*.linear.app; img-src 'self' data: https:; font-src 'self' data:;">
+    <title>Linear Claude</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      /* Prevent flash of unstyled content */
+      html { background: #09090B; }
+      body { margin: 0; font-family: 'Inter', system-ui, sans-serif; }
+      /* Custom scrollbar */
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
+      ::-webkit-scrollbar-track { background: #18181B; }
+      ::-webkit-scrollbar-thumb { background: #3F3F46; border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: #52525B; }
+      /* Draggable title bar area */
+      .drag-region { -webkit-app-region: drag; }
+      .no-drag { -webkit-app-region: no-drag; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
