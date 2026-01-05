@@ -1,0 +1,165 @@
+{
+  "$schema": "../schemas/config.schema.json",
+  "linear": {
+    "defaultTeamKey": "ENG",
+    "defaultFilters": {
+      "stateTypes": ["unstarted", "started"],
+      "limit": 20
+    }
+  },
+  "codebases": [
+    {
+      "rootPath": "/path/to/your/project",
+      "name": "My Awesome Project",
+      "description": "Main product repository",
+      "techStack": {
+        "languages": ["TypeScript", "JavaScript"],
+        "frameworks": ["React", "Next.js", "Express"],
+        "buildTools": ["Webpack", "npm"],
+        "testFrameworks": ["Jest", "Playwright"],
+        "databases": ["PostgreSQL", "Redis"],
+        "infrastructure": ["Docker", "Kubernetes"]
+      },
+      "modules": [
+        {
+          "name": "Frontend Components",
+          "path": "src/components",
+          "description": "Reusable React components",
+          "keywords": ["component", "ui", "button", "form", "modal", "card"],
+          "labels": ["frontend", "ui", "components"],
+          "patterns": ["src/components/**/*.tsx", "src/components/**/*.css"],
+          "dependencies": ["Design System", "Utils"]
+        },
+        {
+          "name": "API Routes",
+          "path": "src/api",
+          "description": "REST API endpoints",
+          "keywords": ["api", "endpoint", "rest", "route", "handler"],
+          "labels": ["backend", "api"],
+          "patterns": ["src/api/**/*.ts"],
+          "dependencies": ["Database", "Services"]
+        },
+        {
+          "name": "Services",
+          "path": "src/services",
+          "description": "Business logic and domain services",
+          "keywords": ["service", "business", "logic", "domain"],
+          "labels": ["backend", "services"],
+          "patterns": ["src/services/**/*.ts"],
+          "dependencies": ["Database", "Utils"]
+        },
+        {
+          "name": "Database",
+          "path": "src/database",
+          "description": "Database models, migrations, and queries",
+          "keywords": ["database", "db", "model", "migration", "query", "schema"],
+          "labels": ["database", "backend"],
+          "patterns": ["src/database/**/*.ts", "prisma/**/*.prisma"],
+          "dependencies": []
+        },
+        {
+          "name": "Authentication",
+          "path": "src/auth",
+          "description": "Authentication and authorization",
+          "keywords": ["auth", "login", "signup", "session", "token", "password", "oauth"],
+          "labels": ["security", "auth"],
+          "patterns": ["src/auth/**/*.ts", "src/middleware/auth*.ts"],
+          "dependencies": ["Database", "Services"]
+        },
+        {
+          "name": "Utils",
+          "path": "src/utils",
+          "description": "Utility functions and helpers",
+          "keywords": ["util", "helper", "common", "shared"],
+          "labels": ["utils"],
+          "patterns": ["src/utils/**/*.ts"],
+          "dependencies": []
+        }
+      ],
+      "entryPoints": [
+        "src/index.ts",
+        "src/app.tsx",
+        "src/server.ts"
+      ],
+      "testPatterns": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/tests/**/*.ts"
+      ],
+      "docPatterns": [
+        "**/*.md",
+        "docs/**/*"
+      ],
+      "excludePatterns": [
+        "node_modules/**",
+        "dist/**",
+        "build/**",
+        "coverage/**",
+        ".git/**"
+      ],
+      "customMappings": [
+        {
+          "labelPatterns": ["bug", "fix"],
+          "keywordPatterns": ["error", "crash", "broken", "not working"],
+          "modulePaths": ["src"],
+          "instructions": "Focus on finding the root cause. Add a regression test."
+        },
+        {
+          "labelPatterns": ["feature", "enhancement"],
+          "keywordPatterns": ["add", "implement", "new", "create"],
+          "modulePaths": ["src"],
+          "instructions": "Follow existing patterns. Include tests and documentation."
+        },
+        {
+          "labelPatterns": ["performance"],
+          "keywordPatterns": ["slow", "optimize", "performance", "speed"],
+          "modulePaths": ["src"],
+          "instructions": "Profile before and after changes. Consider caching."
+        },
+        {
+          "labelPatterns": ["security"],
+          "keywordPatterns": ["vulnerability", "xss", "injection", "auth"],
+          "modulePaths": ["src/auth", "src/middleware", "src/api"],
+          "instructions": "Follow OWASP guidelines. Add security tests."
+        },
+        {
+          "labelPatterns": ["ui", "ux", "design"],
+          "modulePaths": ["src/components", "src/pages", "src/styles"],
+          "instructions": "Follow the design system. Ensure accessibility."
+        },
+        {
+          "labelPatterns": ["api"],
+          "modulePaths": ["src/api", "src/services"],
+          "instructions": "Maintain backwards compatibility. Update API docs."
+        }
+      ]
+    }
+  ],
+  "routing": {
+    "strategies": [
+      "label-mapping",
+      "keyword-extraction",
+      "file-mention",
+      "component-detection"
+    ],
+    "fallbackModule": "src",
+    "confidenceThreshold": 0.3,
+    "maxSuggestedFiles": 10
+  },
+  "claudeCode": {
+    "maxConcurrentSessions": 1,
+    "autoCommit": false,
+    "createBranch": true,
+    "branchPrefix": "fix/",
+    "includeTests": true,
+    "reviewBeforeMerge": true
+  },
+  "defaults": {
+    "issueLimit": 20,
+    "autoSelectSingleMatch": false,
+    "verboseOutput": false,
+    "cacheAnalysis": true,
+    "cacheTTLHours": 24
+  }
+}

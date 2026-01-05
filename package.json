@@ -1,0 +1,60 @@
+{
+  "name": "linear-claude-code",
+  "version": "1.0.0",
+  "description": "Smart integration between Linear issues and Claude Code - automatically routes issues to relevant code areas and solves them",
+  "main": "dist/index.js",
+  "bin": {
+    "linear-claude": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "dev": "ts-node src/cli.ts",
+    "setup": "ts-node src/setup.ts",
+    "analyze": "ts-node src/commands/analyze.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "linear",
+    "claude",
+    "claude-code",
+    "ai",
+    "automation",
+    "issue-tracking",
+    "developer-tools"
+  ],
+  "author": "janMagnusHeimann",
+  "license": "MIT",
+  "dependencies": {
+    "@linear/sdk": "^21.0.0",
+    "commander": "^12.1.0",
+    "chalk": "^4.1.2",
+    "inquirer": "^8.2.6",
+    "ora": "^5.4.1",
+    "conf": "^10.2.0",
+    "glob": "^10.3.10",
+    "ignore": "^5.3.1",
+    "cosmiconfig": "^9.0.0",
+    "dotenv": "^16.4.5",
+    "yaml": "^2.4.1",
+    "openai": "^4.28.0",
+    "tiktoken": "^1.0.13"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/inquirer": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.12",
+    "ts-jest": "^29.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
