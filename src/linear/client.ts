@@ -264,12 +264,12 @@ export class LinearAPIClient {
         issue.state,
         issue.labels(),
         issue.team,
-        issue.project.catch(() => null),
-        issue.assignee.catch(() => null),
-        issue.creator.catch(() => null),
+        issue.project ? issue.project.catch(() => null) : Promise.resolve(null),
+        issue.assignee ? issue.assignee.catch(() => null) : Promise.resolve(null),
+        issue.creator ? issue.creator.catch(() => null) : Promise.resolve(null),
         issue.comments().catch(() => ({ nodes: [] })),
         issue.attachments().catch(() => ({ nodes: [] })),
-        issue.parent.catch(() => null),
+        issue.parent ? issue.parent.catch(() => null) : Promise.resolve(null),
         issue.children().catch(() => ({ nodes: [] })),
       ]);
 

@@ -474,13 +474,13 @@ function getPriorityIndicator(priority: number): string {
 function displayRouteResult(result: RouteResult, verbose: boolean): void {
   console.log(chalk.bold('\n📍 Routing Results:\n'));
 
-  console.log(`Confidence: ${chalk.cyan((result.confidence * 100).toFixed(0)}%`)}`);
-  console.log(`Complexity: ${chalk.cyan(result.context.estimatedComplexity)}`);
+  console.log('Confidence: ' + chalk.cyan((result.confidence * 100).toFixed(0) + '%'));
+  console.log('Complexity: ' + chalk.cyan(result.context.estimatedComplexity));
 
   if (result.relevantModules.length > 0) {
     console.log(chalk.bold('\nRelevant Modules:'));
     for (const { module, score, matchReasons } of result.relevantModules.slice(0, 5)) {
-      console.log(`  ${chalk.green('●')} ${module.name} (${module.path}) - ${(score * 100).toFixed(0)}%`);
+      console.log('  ' + chalk.green('●') + ' ' + module.name + ' (' + module.path + ') - ' + (score * 100).toFixed(0) + '%');
       if (verbose && matchReasons.length > 0) {
         console.log(chalk.dim(`    ${matchReasons.slice(0, 2).join(', ')}`));
       }
@@ -490,9 +490,9 @@ function displayRouteResult(result: RouteResult, verbose: boolean): void {
   if (result.suggestedFiles.length > 0) {
     console.log(chalk.bold('\nSuggested Files:'));
     for (const file of result.suggestedFiles.slice(0, 8)) {
-      console.log(`  ${chalk.blue('●')} ${file.path}`);
+      console.log('  ' + chalk.blue('●') + ' ' + file.path);
       if (verbose) {
-        console.log(chalk.dim(`    ${file.reason}`));
+        console.log(chalk.dim('    ' + file.reason));
       }
     }
   }
@@ -522,16 +522,16 @@ function displayIssueList(issues: LinearIssue[], verbose: boolean): void {
 
   for (const issue of issues) {
     const priority = getPriorityIndicator(issue.priority);
-    const state = chalk.cyan(`[${issue.state.name}]`);
+    const state = chalk.cyan('[' + issue.state.name + ']');
     const labels = issue.labels.length > 0
-      ? chalk.dim(` (${issue.labels.map(l => l.name).join(', ')})`)
+      ? chalk.dim(' (' + issue.labels.map(l => l.name).join(', ') + ')')
       : '';
 
-    console.log(`${priority} ${chalk.bold(issue.identifier)} ${state} ${issue.title}${labels}`);
+    console.log(priority + ' ' + chalk.bold(issue.identifier) + ' ' + state + ' ' + issue.title + labels);
 
     if (verbose && issue.description) {
       const desc = issue.description.split('\n')[0].substring(0, 100);
-      console.log(chalk.dim(`   ${desc}${issue.description.length > 100 ? '...' : ''}`));
+      console.log(chalk.dim('   ' + desc + (issue.description.length > 100 ? '...' : '')));
     }
   }
 
@@ -542,22 +542,22 @@ function displayAnalysis(analysis: CodebaseAnalysis): void {
   console.log(chalk.bold('\n📊 Codebase Analysis\n'));
 
   console.log(chalk.bold('Overview:'));
-  console.log(`  Name: ${analysis.config.name}`);
-  console.log(`  Files: ${analysis.statistics.totalFiles}`);
-  console.log(`  Directories: ${analysis.statistics.totalDirectories}`);
+  console.log('  Name: ' + analysis.config.name);
+  console.log('  Files: ' + analysis.statistics.totalFiles);
+  console.log('  Directories: ' + analysis.statistics.totalDirectories);
 
   console.log(chalk.bold('\nTech Stack:'));
-  console.log(`  Languages: ${analysis.config.techStack.languages.join(', ') || 'Unknown'}`);
-  console.log(`  Frameworks: ${analysis.config.techStack.frameworks.join(', ') || 'None detected'}`);
-  console.log(`  Build Tools: ${analysis.config.techStack.buildTools.join(', ') || 'None detected'}`);
-  console.log(`  Testing: ${analysis.config.techStack.testFrameworks.join(', ') || 'None detected'}`);
+  console.log('  Languages: ' + (analysis.config.techStack.languages.join(', ') || 'Unknown'));
+  console.log('  Frameworks: ' + (analysis.config.techStack.frameworks.join(', ') || 'None detected'));
+  console.log('  Build Tools: ' + (analysis.config.techStack.buildTools.join(', ') || 'None detected'));
+  console.log('  Testing: ' + (analysis.config.techStack.testFrameworks.join(', ') || 'None detected'));
 
   if (analysis.config.modules.length > 0) {
     console.log(chalk.bold('\nDetected Modules:'));
-    for (const module of analysis.config.modules) {
-      console.log(`  ${chalk.green('●')} ${module.name} (${module.path})`);
-      if (module.keywords.length > 0) {
-        console.log(chalk.dim(`    Keywords: ${module.keywords.slice(0, 5).join(', ')}`));
+    for (const mod of analysis.config.modules) {
+      console.log('  ' + chalk.green('●') + ' ' + mod.name + ' (' + mod.path + ')');
+      if (mod.keywords.length > 0) {
+        console.log(chalk.dim('    Keywords: ' + mod.keywords.slice(0, 5).join(', ')));
       }
     }
   }
@@ -568,7 +568,7 @@ function displayAnalysis(analysis: CodebaseAnalysis): void {
       .sort(([, a], [, b]) => b - a)
       .slice(0, 10);
     for (const [ext, count] of sorted) {
-      console.log(`  ${ext || '(no ext)'}: ${count} files`);
+      console.log('  ' + (ext || '(no ext)') + ': ' + count + ' files');
     }
   }
 
