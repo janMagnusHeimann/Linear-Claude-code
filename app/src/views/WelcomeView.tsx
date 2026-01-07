@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Zap, Key, FolderOpen, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
-import { LinearClient } from '@linear/sdk';
 
 interface WelcomeViewProps {
   onComplete: () => void;
@@ -25,9 +24,14 @@ export function WelcomeView({ onComplete }: WelcomeViewProps) {
     setError('');
 
     try {
-      const client = new LinearClient({ apiKey: apiKey.trim() });
-      await client.viewer;
-      setStep(2);
+      if (window.electronAPI) {
+        const result = await window.electronAPI.testLinearConnection(apiKey.trim());
+        if (result.success) {
+          setStep(2);
+        } else {
+          setError(result.error || 'Invalid API key. Please check and try again.');
+        }
+      }
     } catch (err) {
       setError('Invalid API key. Please check and try again.');
     } finally {

@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLinear } from '../contexts/LinearContext';
-import { LinearClient } from '@linear/sdk';
 
 export function SettingsView() {
   const { settings, updateSettings } = useSettings();
@@ -55,11 +54,16 @@ export function SettingsView() {
     setValidationError('');
 
     try {
-      const client = new LinearClient({ apiKey: formData.linearApiKey.trim() });
-      await client.viewer;
-      setValidationError('');
-      // Auto-save on successful validation
-      await handleSave();
+      if (window.electronAPI) {
+        const result = await window.electronAPI.testLinearConnection(formData.linearApiKey.trim());
+        if (result.success) {
+          setValidationError('');
+          // Auto-save on successful validation
+          await handleSave();
+        } else {
+          setValidationError(result.error || 'Invalid API key');
+        }
+      }
     } catch (err) {
       setValidationError('Invalid API key');
     } finally {

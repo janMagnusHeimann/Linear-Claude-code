@@ -32,6 +32,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Platform detection
   platform: process.platform,
+
+  // Linear API
+  testLinearConnection: (apiKey: string) => ipcRenderer.invoke('linear-test-connection', apiKey),
+  fetchTeams: (apiKey: string) => ipcRenderer.invoke('linear-fetch-teams', apiKey),
+  fetchIssues: (apiKey: string, filter: {
+    teamKey?: string;
+    stateType?: string;
+    labelName?: string;
+    searchQuery?: string;
+    assignedToMe?: boolean;
+    currentUserId?: string;
+  }) => ipcRenderer.invoke('linear-fetch-issues', apiKey, filter),
 });
 
 // Type definitions for the exposed API
@@ -56,6 +68,41 @@ declare global {
         arch: string;
       }>;
       platform: string;
+      // Linear API
+      testLinearConnection: (apiKey: string) => Promise<{
+        success: boolean;
+        user?: { id: string; name: string; email: string };
+        error?: string;
+      }>;
+      fetchTeams: (apiKey: string) => Promise<{
+        success: boolean;
+        teams?: Array<{ id: string; name: string; key: string }>;
+        error?: string;
+      }>;
+      fetchIssues: (apiKey: string, filter: {
+        teamKey?: string;
+        stateType?: string;
+        labelName?: string;
+        searchQuery?: string;
+        assignedToMe?: boolean;
+        currentUserId?: string;
+      }) => Promise<{
+        success: boolean;
+        issues?: Array<{
+          id: string;
+          identifier: string;
+          title: string;
+          description: string | null;
+          priority: number;
+          state: { id: string; name: string; type: string; color: string };
+          labels: Array<{ id: string; name: string; color: string }>;
+          team: { id: string; name: string; key: string };
+          url: string;
+          createdAt: string;
+          updatedAt: string;
+        }>;
+        error?: string;
+      }>;
     };
   }
 }

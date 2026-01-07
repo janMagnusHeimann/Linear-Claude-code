@@ -2,10 +2,10 @@ import React from 'react';
 import {
   LayoutList,
   Settings,
-  Zap,
   CheckCircle2,
   XCircle,
 } from 'lucide-react';
+import appIcon from '../assets/icon.png';
 
 interface SidebarProps {
   currentView: string;
@@ -27,9 +27,7 @@ export function Sidebar({ currentView, onNavigate, isConnected }: SidebarProps) 
       {/* Logo */}
       <div className="px-4 pb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-linear-purple to-linear-blue flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" />
-          </div>
+          <img src={appIcon} alt="Linear Claude" className="w-10 h-10 rounded-xl" />
           <div>
             <h1 className="font-semibold text-linear-gray-100">Linear Claude</h1>
             <p className="text-xs text-linear-gray-500">AI Issue Solver</p>
