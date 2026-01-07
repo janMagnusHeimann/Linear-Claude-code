@@ -25,7 +25,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
     workingDirectory: string;
     prompt: string;
     branchName?: string;
+    issueId: string;
+    issueTitle: string;
+    issueDescription?: string;
+    issueUrl?: string;
   }) => ipcRenderer.invoke('invoke-claude-code', options),
+
+  approveClaudeCodePlan: (options: {
+    sessionId: string;
+    approved: boolean;
+  }) => ipcRenderer.invoke('claude-code:approve-plan', options),
+
+  cancelClaudeCode: (options: {
+    sessionId: string;
+  }) => ipcRenderer.invoke('claude-code:cancel', options),
+
+  getClaudeCodeSession: (options: {
+    sessionId: string;
+  }) => ipcRenderer.invoke('claude-code:get-session', options),
+
+  onClaudeCodeProgress: (callback: (update: any) => void) => {
+    const listener = (_: any, update: any) => callback(update);
+    ipcRenderer.on('claude-code:progress', listener);
+    return () => ipcRenderer.removeListener('claude-code:progress', listener);
+  },
 
   // App info
   getAppInfo: () => ipcRenderer.invoke('get-app-info'),
@@ -60,7 +83,22 @@ declare global {
         workingDirectory: string;
         prompt: string;
         branchName?: string;
-      }) => Promise<{ success: boolean; promptFile: string }>;
+        issueId: string;
+        issueTitle: string;
+        issueDescription?: string;
+        issueUrl?: string;
+      }) => Promise<{ success: boolean; sessionId?: string; error?: string }>;
+      approveClaudeCodePlan: (options: {
+        sessionId: string;
+        approved: boolean;
+      }) => Promise<{ success: boolean; error?: string }>;
+      cancelClaudeCode: (options: {
+        sessionId: string;
+      }) => Promise<{ success: boolean; error?: string }>;
+      getClaudeCodeSession: (options: {
+        sessionId: string;
+      }) => Promise<{ success: boolean; session?: any; error?: string }>;
+      onClaudeCodeProgress: (callback: (update: any) => void) => () => void;
       getAppInfo: () => Promise<{
         version: string;
         name: string;

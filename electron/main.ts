@@ -8,20 +8,30 @@ import * as path from 'path';
 import * as fs from 'fs';
 import Store from 'electron-store';
 import { LinearClient } from '@linear/sdk';
+import { ClaudeCodeExecutor } from './claude-executor';
 
 // Linear client instance (created when API key is set)
 let linearClient: LinearClient | null = null;
+
+// Claude Code executor instance
+let claudeExecutor: ClaudeCodeExecutor | null = null;
 
 // Initialize electron store for persistent settings
 const store = new Store({
   name: 'linear-claude-settings',
   defaults: {
     linearApiKey: '',
+    anthropicApiKey: '',
     defaultTeam: '',
     codebasePath: '',
     theme: 'dark',
     createBranch: true,
     branchPrefix: 'fix/',
+    autoApprovePlans: false,
+    planReviewEnabled: true,
+    promptEnhancementEnabled: true,
+    createPR: false,
+    prBaseBranch: 'main',
   },
 });
 
@@ -62,6 +72,37 @@ function createWindow(): void {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  // Initialize Claude Code executor with API key from settings
+  const anthropicApiKey = store.get('anthropicApiKey') as string;
+  const promptEnhancementEnabled = store.get('promptEnhancementEnabled') as boolean;
+  claudeExecutor = new ClaudeCodeExecutor({
+    anthropicApiKey,
+    promptEnhancementEnabled,
+  });
+  claudeExecutor.setMainWindow(mainWindow);
+}
+
+// Fix PATH for spawned processes on macOS
+// Electron apps don't get the full shell PATH, so we manually add common bin directories
+if (process.platform === 'darwin' || process.platform === 'linux') {
+  const homeDir = process.env.HOME || '';
+  const additionalPaths = [
+    `${homeDir}/.local/bin`,           // Common user bin (where claude is often installed)
+    '/usr/local/bin',                   // Homebrew Intel
+    '/opt/homebrew/bin',                // Homebrew Apple Silicon
+    `${homeDir}/.npm-global/bin`,      // npm global (custom prefix)
+    '/usr/local/opt/node/bin',         // Node via Homebrew
+    '/opt/local/bin',                   // MacPorts
+  ].filter(p => p); // Remove empty paths
+
+  const currentPath = process.env.PATH || '';
+  const pathsToAdd = additionalPaths.filter(p => !currentPath.includes(p));
+
+  if (pathsToAdd.length > 0) {
+    process.env.PATH = [...pathsToAdd, currentPath].join(':');
+    console.log('Augmented PATH with:', pathsToAdd.join(', '));
+  }
 }
 
 // App lifecycle
@@ -119,51 +160,79 @@ ipcMain.handle('invoke-claude-code', async (_, options: {
   workingDirectory: string;
   prompt: string;
   branchName?: string;
+  issueId: string;
+  issueTitle: string;
+  issueDescription?: string;
+  issueUrl?: string;
 }) => {
-  const { spawn } = require('child_process');
+  if (!claudeExecutor) {
+    return { success: false, error: 'Claude Code executor not initialized' };
+  }
 
-  return new Promise((resolve, reject) => {
-    // Create the prompt file
-    const promptFile = path.join(options.workingDirectory, '.claude', 'current-issue.md');
-    const claudeDir = path.dirname(promptFile);
-
-    if (!fs.existsSync(claudeDir)) {
-      fs.mkdirSync(claudeDir, { recursive: true });
-    }
-    fs.writeFileSync(promptFile, options.prompt);
-
-    // If branch name provided, create branch first
-    if (options.branchName) {
-      try {
-        const { execSync } = require('child_process');
-        execSync(`git checkout -b ${options.branchName}`, {
-          cwd: options.workingDirectory,
-          stdio: 'pipe'
-        });
-      } catch (error) {
-        // Branch might already exist, try to checkout
-        try {
-          const { execSync } = require('child_process');
-          execSync(`git checkout ${options.branchName}`, {
-            cwd: options.workingDirectory,
-            stdio: 'pipe'
-          });
-        } catch {
-          // Ignore branch errors
-        }
-      }
-    }
-
-    // Open terminal with Claude Code
-    const terminal = spawn('open', ['-a', 'Terminal', options.workingDirectory], {
-      detached: true,
+  try {
+    const sessionId = await claudeExecutor.startSession({
+      workingDirectory: options.workingDirectory,
+      prompt: options.prompt,
+      branchName: options.branchName,
+      issueId: options.issueId,
+      issueTitle: options.issueTitle,
+      issueDescription: options.issueDescription,
+      issueUrl: options.issueUrl,
     });
 
-    terminal.on('error', reject);
-    terminal.on('close', () => {
-      resolve({ success: true, promptFile });
-    });
-  });
+    return { success: true, sessionId };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Approve Claude Code plan
+ipcMain.handle('claude-code:approve-plan', async (_, options: {
+  sessionId: string;
+  approved: boolean;
+}) => {
+  if (!claudeExecutor) {
+    return { success: false, error: 'Claude Code executor not initialized' };
+  }
+
+  try {
+    if (options.approved) {
+      await claudeExecutor.approvePlan(options.sessionId);
+    } else {
+      await claudeExecutor.cancelSession(options.sessionId);
+    }
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Cancel Claude Code execution
+ipcMain.handle('claude-code:cancel', async (_, options: { sessionId: string }) => {
+  if (!claudeExecutor) {
+    return { success: false, error: 'Claude Code executor not initialized' };
+  }
+
+  try {
+    await claudeExecutor.cancelSession(options.sessionId);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Get Claude Code session status
+ipcMain.handle('claude-code:get-session', async (_, options: { sessionId: string }) => {
+  if (!claudeExecutor) {
+    return { success: false, error: 'Claude Code executor not initialized' };
+  }
+
+  try {
+    const session = claudeExecutor.getSession(options.sessionId);
+    return { success: true, session };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
 });
 
 // App info

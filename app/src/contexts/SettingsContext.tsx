@@ -7,6 +7,8 @@ interface Settings {
   theme: 'dark' | 'light';
   createBranch: boolean;
   branchPrefix: string;
+  createPR: boolean;
+  prBaseBranch: string;
 }
 
 interface SettingsContextType {
@@ -23,6 +25,8 @@ const defaultSettings: Settings = {
   theme: 'dark',
   createBranch: true,
   branchPrefix: 'fix/',
+  createPR: false,
+  prBaseBranch: 'main',
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

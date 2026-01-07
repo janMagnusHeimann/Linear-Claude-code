@@ -23,6 +23,8 @@ export function SettingsView() {
     codebasePath: settings.codebasePath,
     createBranch: settings.createBranch,
     branchPrefix: settings.branchPrefix,
+    createPR: settings.createPR,
+    prBaseBranch: settings.prBaseBranch,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -175,6 +177,53 @@ export function SettingsView() {
             )}
           </div>
 
+          {/* Anthropic API Key */}
+          <div className="card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Key className="w-5 h-5 text-linear-purple" />
+              <h2 className="text-lg font-semibold text-linear-gray-100">Anthropic API Key</h2>
+            </div>
+            <p className="text-sm text-linear-gray-400 mb-4">
+              Used for AI-powered plan review before execution.{' '}
+              <button
+                onClick={() => window.electronAPI?.openExternal('https://console.anthropic.com')}
+                className="text-linear-purple hover:underline inline-flex items-center gap-1"
+              >
+                Get your API key
+                <ExternalLink className="w-3 h-3" />
+              </button>
+            </p>
+
+            <input
+              type="password"
+              value={formData.anthropicApiKey || ''}
+              onChange={(e) => handleChange('anthropicApiKey', e.target.value)}
+              placeholder="sk-ant-api03-..."
+              className="input"
+            />
+
+            <p className="text-xs text-linear-gray-500 mt-2">
+              Optional: If not provided, plans will be auto-approved without AI review.
+            </p>
+
+            <label className="flex items-center gap-2 mt-3">
+              <input
+                type="checkbox"
+                checked={formData.promptEnhancementEnabled ?? true}
+                onChange={(e) => handleChange('promptEnhancementEnabled', e.target.checked)}
+                disabled={!formData.anthropicApiKey}
+                className="rounded"
+              />
+              <span className="text-sm text-linear-gray-300">
+                Enable AI prompt enhancement
+              </span>
+            </label>
+            <p className="text-xs text-linear-gray-500 mt-1">
+              Uses Claude API to create better prompts based on your issue and claude.md.
+              {!formData.anthropicApiKey && ' (Requires API key)'}
+            </p>
+          </div>
+
           {/* Default Team */}
           {isConnected && teams.length > 0 && (
             <div className="card p-6">
@@ -257,6 +306,70 @@ export function SettingsView() {
                   />
                   <p className="text-sm text-linear-gray-500 mt-2">
                     Example: <code className="text-linear-purple">{formData.branchPrefix}eng-123-issue-title</code>
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* GitHub Pull Request Settings */}
+          <div className="card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <GitBranch className="w-5 h-5 text-linear-purple" />
+              <h2 className="text-lg font-semibold text-linear-gray-100">GitHub Pull Request Settings</h2>
+            </div>
+
+            <div className="space-y-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.createPR}
+                  onChange={(e) => handleChange('createPR', e.target.checked)}
+                  disabled={!formData.createBranch}
+                  className="w-5 h-5 rounded border-linear-gray-700 bg-linear-gray-800 text-linear-purple focus:ring-linear-purple focus:ring-offset-linear-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <div>
+                  <p className="font-medium text-linear-gray-100">Auto-create Pull Requests</p>
+                  <p className="text-sm text-linear-gray-500">
+                    Automatically create a GitHub PR after Claude Code completes
+                  </p>
+                </div>
+              </label>
+
+              {formData.createPR && (
+                <div className="ml-8 space-y-4 pl-4 border-l-2 border-linear-gray-800">
+                  <div>
+                    <label className="block text-sm font-medium text-linear-gray-400 mb-2">
+                      Base Branch
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.prBaseBranch}
+                      onChange={(e) => handleChange('prBaseBranch', e.target.value)}
+                      placeholder="main"
+                      className="input w-48"
+                    />
+                    <p className="text-sm text-linear-gray-500 mt-2">
+                      PRs will be created against this branch
+                    </p>
+                  </div>
+
+                  <div className="bg-linear-gray-900 p-4 rounded-lg">
+                    <h3 className="text-sm font-medium text-linear-gray-300 mb-2">Requirements:</h3>
+                    <ul className="text-sm text-linear-gray-400 space-y-1 list-disc list-inside">
+                      <li>GitHub CLI (gh) must be installed</li>
+                      <li>Must be authenticated with <code className="text-linear-purple">gh auth login</code></li>
+                      <li>Repository must be a GitHub repository</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {!formData.createBranch && formData.createPR && (
+                <div className="flex items-center gap-2 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-yellow-500" />
+                  <p className="text-sm text-yellow-400">
+                    PR creation requires branch creation to be enabled
                   </p>
                 </div>
               )}

@@ -10,12 +10,14 @@
 ## Features
 
 - 🖥️ **Beautiful Desktop App**: Modern UI with dark mode, built with React and Tailwind CSS
-- 🎯 **Smart Issue Routing**: AI identifies which parts of your codebase are relevant to each issue
-- 📊 **Codebase Analysis**: Understands your project structure, tech stack, and modules
-- 🔍 **Multiple Routing Strategies**: Label mapping, keyword extraction, file mentions, and component detection
-- 🤖 **One-Click Solve**: Launch Claude Code with full context about the issue
+- 📝 **claude.md Integration**: Leverages Claude Code's native project context
+- 🚀 **Auto-Initialization**: Automatically runs `claude /init` for new projects
+- 🤖 **AI Prompt Enhancement**: Optional Claude API integration to create detailed prompts (cheap single call)
+- 🧠 **Intelligent Plan Review**: AI reviews implementation plans before execution
+- 📊 **Real-time Monitoring**: Live terminal output and progress tracking
 - 🔧 **Flexible Filtering**: Filter issues by team, status, labels, assignee, and more
 - 🌿 **Git Integration**: Automatically creates branches for each issue
+- 🔔 **macOS Notifications**: Get notified when Claude Code completes
 
 ## Installation
 
@@ -86,29 +88,49 @@ linear-claude list --status started
 ## How It Works
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Linear API    │────▶│  Issue Router    │────▶│   Claude Code   │
-│  Fetch Issues   │     │  Find Relevant   │     │  Solve Issue    │
-│                 │     │  Code Areas      │     │  with Context   │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-         │                      │                        │
-         ▼                      ▼                        ▼
-   ┌───────────┐         ┌───────────┐           ┌───────────┐
-   │  Filters  │         │  Analyze  │           │  Branch   │
-   │  - Team   │         │  Codebase │           │  Created  │
-   │  - Status │         │  - Modules│           │  Context  │
-   │  - Labels │         │  - Stack  │           │  Provided │
-   └───────────┘         └───────────┘           └───────────┘
+1. User selects Linear issue
+          ↓
+2. Check if claude.md exists in project root
+          ↓
+    ┌─────┴─────┐
+    │           │
+   NO          YES
+    │           │
+    ↓           ↓
+Run claude     Read existing
+   /init       claude.md
+    │           │
+    └─────┬─────┘
+          ↓
+3. AI Enhancement Enabled? (Settings + API Key)
+          ↓
+    ┌─────┴─────┐
+    │           │
+   YES          NO
+    │           │
+    ↓           ↓
+ Enhance      Use basic
+ prompt       prompt
+ (Claude API) (ticket only)
+    │           │
+    └─────┬─────┘
+          ↓
+4. Send prompt to Claude Code
+          ↓
+5. Monitor execution + AI plan review
+          ↓
+6. Complete → macOS notification
 ```
 
-### Routing Strategies
+### Key Features
 
-| Strategy | How It Works |
-|----------|--------------|
-| **Label Mapping** | Maps Linear labels to code modules (e.g., "frontend" → `src/components`) |
-| **Keyword Extraction** | Finds keywords in issue title/description and matches to code |
-| **File Mention** | Detects file paths mentioned in issues |
-| **Component Detection** | Identifies UI components and features referenced |
+| Feature | Description |
+|---------|-------------|
+| **claude.md Integration** | Leverages Claude Code's native project context instead of custom analysis |
+| **Auto-Initialization** | Automatically runs `claude /init` for new projects |
+| **AI Prompt Enhancement** | Optional: Uses Claude API to create detailed prompts from tickets + claude.md |
+| **Plan Review** | AI reviews Claude Code's implementation plans before execution |
+| **Real-time Monitoring** | Live terminal output and progress tracking in the app |
 
 ## App Screenshots
 
@@ -128,6 +150,8 @@ Easy configuration of API keys, codebase paths, and git settings.
 1. Go to **Settings**
 2. Configure:
    - Linear API Key
+   - Anthropic API Key (optional, for AI features)
+   - Enable/Disable AI prompt enhancement
    - Default Team
    - Codebase Path
    - Git branch creation
@@ -209,6 +233,7 @@ npm run app:package
 - Node.js 18+
 - Claude Code installed ([Install Claude Code](https://claude.ai/code))
 - Linear account with API key
+- Anthropic API key (optional, for AI prompt enhancement and plan review)
 
 ## Troubleshooting
 
