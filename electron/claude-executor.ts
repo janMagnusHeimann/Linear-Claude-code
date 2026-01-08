@@ -166,6 +166,26 @@ export class ClaudeCodeExecutor {
       // Update session with final prompt
       session.prompt = finalPrompt;
 
+      // Create git branch if specified
+      if (session.branchName) {
+        try {
+          execSync(`git checkout -b ${session.branchName}`, {
+            cwd: session.workingDirectory,
+            stdio: 'pipe'
+          });
+        } catch (error) {
+          // Branch might already exist, try to checkout
+          try {
+            execSync(`git checkout ${session.branchName}`, {
+              cwd: session.workingDirectory,
+              stdio: 'pipe'
+            });
+          } catch {
+            // Ignore branch errors
+          }
+        }
+      }
+
       // Spawn Claude Code
       session.state = 'PLANNING';
       this.sendProgress(session.id, { output: 'Starting Claude Code...\n' });
@@ -206,14 +226,15 @@ export class ClaudeCodeExecutor {
       if (code === 0 && session.state !== 'ERROR' && session.state !== 'CANCELLED') {
         session.state = 'COMPLETE';
         session.completedAt = new Date();
+        this.sendProgress(session.id, { output: '\n✓ Claude Code completed successfully!\n' });
 
-        // Extract PR URL from Claude Code output (if any)
-        const prUrl = this.extractPrUrl(session.fullOutput);
-
-        this.sendProgress(session.id, {
-          output: '\n✓ Claude Code completed successfully!\n',
-          prUrl: prUrl || undefined,
-        });
+        // Commit and push changes if branch was created
+        if (session.branchName) {
+          this.commitChanges(session);
+          this.pushBranch(session).catch(error => {
+            console.error('Error in pushBranch:', error);
+          });
+        }
 
         this.sendNotification(session);
       } else if (session.state !== 'CANCELLED') {
@@ -475,27 +496,263 @@ export class ClaudeCodeExecutor {
     notification.show();
   }
 
-  /**
-   * Extract PR URL from Claude Code output
-   * Looks for patterns like:
-   * - "Created PR: https://github.com/..."
-   * - "Pull request created: https://github.com/..."
-   * - "https://github.com/.../pull/123"
-   */
-  private extractPrUrl(output: string): string | null {
-    // Pattern 1: "Created PR: <url>" or "Pull request: <url>"
-    const prPattern1 = /(?:created pr|pull request|pr created|view pr):\s*(https:\/\/github\.com\/[^\s]+)/i;
-    const match1 = output.match(prPattern1);
-    if (match1) return match1[1];
+  private async pushBranch(session: ExecutionSession): Promise<void> {
+    if (!session.branchName) return;
 
-    // Pattern 2: Direct GitHub PR URL
-    const prPattern2 = /(https:\/\/github\.com\/[^\/]+\/[^\/]+\/pull\/\d+)/g;
-    const matches = output.match(prPattern2);
-    if (matches && matches.length > 0) {
-      // Return the last PR URL found (most likely the one just created)
-      return matches[matches.length - 1];
+    try {
+      this.sendProgress(session.id, { output: `\n📤 Pushing branch to remote...\n` });
+
+      // Push branch with upstream tracking
+      execSync(`git push -u origin ${session.branchName}`, {
+        cwd: session.workingDirectory,
+        stdio: 'pipe'
+      });
+
+      this.sendProgress(session.id, {
+        output: `✓ Branch pushed to GitHub: ${session.branchName}\n`
+      });
+
+      // Get PR settings from store
+      const createPR = this.store.get('createPR') as boolean;
+      const prBaseBranch = this.store.get('prBaseBranch') as string;
+
+      // Attempt to create PR if enabled
+      if (createPR) {
+        const prUrl = await this.createPullRequest(session, {
+          baseBranch: prBaseBranch || 'main',
+          createPR: true,
+        });
+
+        // If PR creation failed or was skipped, show branch URL
+        if (!prUrl) {
+          const branchUrl = this.getGitHubBranchUrl(session.workingDirectory, session.branchName);
+          if (branchUrl) {
+            this.sendProgress(session.id, {
+              output: `🔗 View branch on GitHub: ${branchUrl}\n`
+            });
+          }
+        }
+      } else {
+        // If PR creation is disabled, show branch URL
+        const branchUrl = this.getGitHubBranchUrl(session.workingDirectory, session.branchName);
+        if (branchUrl) {
+          this.sendProgress(session.id, {
+            output: `🔗 View on GitHub: ${branchUrl}\n`
+          });
+        }
+      }
+    } catch (error: any) {
+      // Don't fail the whole operation if push fails
+      console.error('Failed to push branch:', error);
+      this.sendProgress(session.id, {
+        output: `⚠️  Could not push branch to remote: ${error.message}\n` +
+                `You can manually push with: git push -u origin ${session.branchName}\n`
+      });
+    }
+  }
+
+  private commitChanges(session: ExecutionSession): void {
+    if (!session.branchName) return;
+
+    try {
+      // Check if there are uncommitted changes
+      const gitStatus = execSync('git status --porcelain', {
+        cwd: session.workingDirectory,
+        encoding: 'utf-8',
+        stdio: 'pipe',
+      }).trim();
+
+      if (!gitStatus) {
+        // No changes to commit
+        this.sendProgress(session.id, {
+          output: 'ℹ️  No changes to commit\n',
+        });
+        return;
+      }
+
+      this.sendProgress(session.id, { output: '\n📝 Committing changes...\n' });
+
+      // Stage all changes
+      execSync('git add -A', {
+        cwd: session.workingDirectory,
+        stdio: 'pipe',
+      });
+
+      // Build commit message
+      const commitMessage = `${session.issueId}: ${session.issueTitle}
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>`;
+
+      // Commit with heredoc for proper formatting
+      const commitCommand = `git commit -m "$(cat <<'EOF'
+${commitMessage}
+EOF
+)"`;
+
+      execSync(commitCommand, {
+        cwd: session.workingDirectory,
+        stdio: 'pipe',
+      });
+
+      this.sendProgress(session.id, {
+        output: `✓ Changes committed: ${session.issueId}: ${session.issueTitle}\n`,
+      });
+    } catch (error: any) {
+      // Don't fail the whole operation if commit fails
+      console.error('Failed to commit changes:', error);
+      this.sendProgress(session.id, {
+        output:
+          `⚠️  Failed to commit changes: ${error.message}\n` +
+          'You can manually commit with: git add -A && git commit\n',
+      });
+    }
+  }
+
+  private getGitHubBranchUrl(workingDirectory: string, branchName: string): string | null {
+    try {
+      // Get the remote URL
+      const remoteUrl = execSync('git config --get remote.origin.url', {
+        cwd: workingDirectory,
+        encoding: 'utf-8',
+        stdio: 'pipe'
+      }).trim();
+
+      // Parse GitHub URL (supports both HTTPS and SSH formats)
+      // HTTPS: https://github.com/owner/repo.git
+      // SSH: git@github.com:owner/repo.git
+      const match = remoteUrl.match(/github\.com[:/](.+?)\/(.+?)(\.git)?$/);
+
+      if (match) {
+        const owner = match[1];
+        const repo = match[2].replace(/\.git$/, '');
+        return `https://github.com/${owner}/${repo}/tree/${encodeURIComponent(branchName)}`;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Failed to get GitHub URL:', error);
+      return null;
+    }
+  }
+
+  private async createPullRequest(
+    session: ExecutionSession,
+    config: { baseBranch: string; createPR: boolean }
+  ): Promise<string | null> {
+    if (!session.branchName || !config.createPR) {
+      return null;
     }
 
-    return null;
+    try {
+      this.sendProgress(session.id, { output: '\n📋 Creating pull request...\n' });
+
+      // Check if gh CLI is installed
+      try {
+        execSync('gh --version', {
+          cwd: session.workingDirectory,
+          stdio: 'pipe',
+        });
+      } catch (error) {
+        this.sendProgress(session.id, {
+          output:
+            '⚠️  GitHub CLI (gh) not found. Skipping PR creation.\n' +
+            'Install gh CLI: https://cli.github.com/\n',
+        });
+        return null;
+      }
+
+      // Check if authenticated
+      try {
+        execSync('gh auth status', {
+          cwd: session.workingDirectory,
+          stdio: 'pipe',
+        });
+      } catch (error) {
+        this.sendProgress(session.id, {
+          output:
+            '⚠️  Not authenticated with GitHub CLI. Skipping PR creation.\n' +
+            'Run: gh auth login\n',
+        });
+        return null;
+      }
+
+      // Build PR title (use Linear issue identifier and title)
+      const prTitle = `${session.issueId}: ${session.issueTitle}`;
+
+      // Build PR description
+      const prDescription = this.buildPRDescription(session);
+
+      // Create PR using gh CLI
+      const ghCommand = `gh pr create --base "${this.escapeShellArg(config.baseBranch)}" --title "${this.escapeShellArg(prTitle)}" --body "${this.escapeShellArg(prDescription)}"`;
+
+      const prOutput = execSync(ghCommand, {
+        cwd: session.workingDirectory,
+        encoding: 'utf-8',
+        stdio: 'pipe',
+      });
+
+      // Extract PR URL from output
+      // gh pr create returns the PR URL on the last line
+      const prUrl = prOutput.trim().split('\n').pop()?.trim();
+
+      if (prUrl && prUrl.startsWith('https://')) {
+        this.sendProgress(session.id, {
+          output: `✓ Pull request created successfully!\n🔗 View PR: ${prUrl}\n`,
+          prUrl: prUrl,
+        });
+        return prUrl;
+      } else {
+        this.sendProgress(session.id, {
+          output: `✓ Pull request created, but could not parse URL\n${prOutput}\n`,
+        });
+        return null;
+      }
+    } catch (error: any) {
+      // Don't fail the whole operation if PR creation fails
+      console.error('Failed to create PR:', error);
+
+      const errorMessage = error.message || 'Unknown error';
+      const stderr = error.stderr?.toString() || '';
+
+      this.sendProgress(session.id, {
+        output:
+          `⚠️  Failed to create pull request: ${errorMessage}\n` +
+          (stderr ? `Details: ${stderr}\n` : '') +
+          `You can manually create a PR from: ${this.getGitHubBranchUrl(session.workingDirectory, session.branchName)}\n`,
+      });
+
+      return null;
+    }
+  }
+
+  private buildPRDescription(session: ExecutionSession): string {
+    const parts: string[] = [];
+
+    // Add issue description if available
+    if (session.issueDescription) {
+      parts.push(session.issueDescription);
+      parts.push(''); // Blank line
+    }
+
+    // Add link to Linear issue
+    if (session.issueUrl) {
+      parts.push('---');
+      parts.push('');
+      parts.push(`**Linear Issue:** [${session.issueId}](${session.issueUrl})`);
+    }
+
+    // Add labels if available
+    if (session.issueLabels && session.issueLabels.length > 0) {
+      parts.push(`**Labels:** ${session.issueLabels.join(', ')}`);
+    }
+
+    return parts.join('\n');
+  }
+
+  private escapeShellArg(arg: string): string {
+    // Escape double quotes and backslashes for shell command
+    return arg.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
   }
 }
