@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Play,
   XCircle,
+  CheckCircle,
 } from 'lucide-react';
 import { useLinear } from '../contexts/LinearContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -41,6 +42,7 @@ export function SolveView({ issueId, onBack }: SolveViewProps) {
   const [liveOutput, setLiveOutput] = useState<string>('');
   const [plan, setPlan] = useState<string | null>(null);
   const [reviewResult, setReviewResult] = useState<any>(null);
+  const [prUrl, setPrUrl] = useState<string | null>(null);
 
   const issue = issueId ? getIssueById(issueId) : null;
 
@@ -60,6 +62,9 @@ export function SolveView({ issueId, onBack }: SolveViewProps) {
       }
       if (update.reviewResult) {
         setReviewResult(update.reviewResult);
+      }
+      if (update.prUrl) {
+        setPrUrl(update.prUrl);
       }
 
       // Update step when complete
@@ -81,7 +86,7 @@ export function SolveView({ issueId, onBack }: SolveViewProps) {
   const generatePrompt = () => {
     if (!issue) return '';
 
-    return `# Issue: ${issue.identifier} - ${issue.title}
+    let prompt = `# Issue: ${issue.identifier} - ${issue.title}
 
 ## Description
 ${issue.description || 'No description provided'}
@@ -89,8 +94,69 @@ ${issue.description || 'No description provided'}
 ## Labels
 ${issue.labels.map((l) => l.name).join(', ') || 'None'}
 
+---
+
+## Git Workflow Instructions
+`;
+
+    // Add branch creation instructions
+    if (settings.createBranch) {
+      const suggestedBranch = `${settings.branchPrefix}${issue.identifier.toLowerCase()}-${issue.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .substring(0, 30)}`;
+
+      prompt += `
+1. **Create a new branch:**
+   - Suggested name: \`${suggestedBranch}\`
+   - Run: \`git checkout -b ${suggestedBranch}\` (or use your own branch name)
+
+2. **Implement the solution:**
+   - Make changes to solve the issue
+   - Follow the project's best practices
+   - Test your changes if applicable
+
+3. **Commit your changes:**
+   - Create meaningful commit messages as you work
+   - Use multiple commits if appropriate
+   - Include issue ID (${issue.identifier}) in commit messages
+
+4. **Push the branch:**
+   - Run: \`git push -u origin <branch-name>\`
+`;
+
+      // Add PR creation instructions if enabled
+      if (settings.createPR) {
+        prompt += `
+5. **Create a Pull Request:**
+   - Base branch: \`${settings.prBaseBranch}\`
+   - Title: \`${issue.identifier}: ${issue.title}\`
+   - Include in PR description:
+     - Summary of changes made
+     - Linear issue: [${issue.identifier}](${issue.url})
+     - Test results (if applicable)
+   - Run: \`gh pr create --base "${settings.prBaseBranch}" --title "${issue.identifier}: ${issue.title}" --body "<description>"\`
+   - **IMPORTANT:** After creating the PR, share the PR URL
+`;
+      } else {
+        prompt += `
+5. After pushing, share the branch URL so I can see it
+`;
+      }
+    } else {
+      prompt += `
+Please implement the solution in the current branch and commit your changes with meaningful commit messages.
+`;
+    }
+
+    prompt += `
+
+---
+
 ## Instructions
-Please solve this issue following the project's best practices.`;
+Please solve this issue following the project's best practices and the git workflow above.`;
+
+    return prompt;
   };
 
   const launchClaudeCode = async () => {
@@ -332,6 +398,33 @@ Please solve this issue following the project's best practices.`;
                   Cancel Execution
                 </button>
               )}
+            </div>
+          )}
+
+          {/* Completion Status with PR Link */}
+          {executionState === 'COMPLETE' && (
+            <div className="card p-6 bg-green-500/10 border-green-500/20">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-green-400">
+                    Issue Solved Successfully!
+                  </h3>
+                  {prUrl && (
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.electronAPI?.openExternal(prUrl);
+                      }}
+                      className="text-sm text-linear-purple hover:underline mt-1 inline-flex items-center gap-2"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      View Pull Request
+                    </a>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -5,6 +5,27 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 
+// Type for Claude Code progress updates
+export type ExecutionState =
+  | 'INITIALIZING'
+  | 'PLANNING'
+  | 'AWAITING_APPROVAL'
+  | 'REVIEWING_PLAN'
+  | 'IMPLEMENTING'
+  | 'COMPLETE'
+  | 'ERROR'
+  | 'CANCELLED';
+
+export interface ClaudeCodeProgressUpdate {
+  sessionId: string;
+  stage: ExecutionState;
+  output?: string;
+  plan?: string;
+  reviewResult?: any;
+  prUrl?: string;
+  error?: string;
+}
+
 // Expose protected methods that allow the renderer process to use
 // ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -44,8 +65,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     sessionId: string;
   }) => ipcRenderer.invoke('claude-code:get-session', options),
 
-  onClaudeCodeProgress: (callback: (update: any) => void) => {
-    const listener = (_: any, update: any) => callback(update);
+  onClaudeCodeProgress: (callback: (update: ClaudeCodeProgressUpdate) => void) => {
+    const listener = (_: any, update: ClaudeCodeProgressUpdate) => callback(update);
     ipcRenderer.on('claude-code:progress', listener);
     return () => ipcRenderer.removeListener('claude-code:progress', listener);
   },
@@ -98,7 +119,7 @@ declare global {
       getClaudeCodeSession: (options: {
         sessionId: string;
       }) => Promise<{ success: boolean; session?: any; error?: string }>;
-      onClaudeCodeProgress: (callback: (update: any) => void) => () => void;
+      onClaudeCodeProgress: (callback: (update: ClaudeCodeProgressUpdate) => void) => () => void;
       getAppInfo: () => Promise<{
         version: string;
         name: string;
