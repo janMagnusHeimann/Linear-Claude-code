@@ -37,7 +37,7 @@ const store = new Store({
 
 let mainWindow: BrowserWindow | null = null;
 
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const isDev = process.env.NODE_ENV === 'development';
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
