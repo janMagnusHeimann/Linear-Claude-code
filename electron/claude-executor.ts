@@ -5,7 +5,6 @@ import * as path from 'path';
 import { BrowserWindow, Notification } from 'electron';
 import Store from 'electron-store';
 import { PlanReviewer, ReviewResult } from './plan-reviewer';
-import { ClaudeMdChecker } from './claude-md-checker';
 import { PromptEnhancer } from './prompt-enhancer';
 
 export type ExecutionState =
@@ -116,28 +115,26 @@ export class ClaudeCodeExecutor {
 
   private async executeSession(session: ExecutionSession): Promise<void> {
     try {
-      // NEW: Check and initialize claude.md
-      const checker = new ClaudeMdChecker();
-      const checkResult = await checker.checkAndInit(session.workingDirectory);
+      // Check if claude.md exists (optional, not required)
+      const claudeMdPath = path.join(session.workingDirectory, 'claude.md');
+      const claudeMdExists = fs.existsSync(claudeMdPath);
+      let claudeMdContent: string | undefined;
 
-      if (!checkResult.exists) {
-        throw new Error('Failed to initialize claude.md. Make sure Claude Code is installed.');
-      }
-
-      if (checkResult.initialized) {
-        this.sendProgress(session.id, {
-          output: '✓ Initialized claude.md for this project\n'
-        });
-      } else {
+      if (claudeMdExists) {
         this.sendProgress(session.id, {
           output: '✓ Found existing claude.md\n'
+        });
+        claudeMdContent = fs.readFileSync(claudeMdPath, 'utf-8');
+      } else {
+        this.sendProgress(session.id, {
+          output: 'ℹ️  No claude.md found. For better results, run `claude` and type `/init` in your project.\n'
         });
       }
 
       // NEW: Enhance prompt if enabled
       let finalPrompt = session.prompt;
 
-      if (this.promptEnhancer && checkResult.content) {
+      if (this.promptEnhancer && claudeMdContent) {
         this.sendProgress(session.id, {
           output: '🤖 Enhancing prompt with AI...\n'
         });
@@ -146,7 +143,7 @@ export class ClaudeCodeExecutor {
           issueTitle: session.issueTitle,
           issueDescription: session.prompt,
           issueLabels: session.issueLabels,
-          claudeMdContent: checkResult.content,
+          claudeMdContent: claudeMdContent,
         });
 
         this.sendProgress(session.id, {
