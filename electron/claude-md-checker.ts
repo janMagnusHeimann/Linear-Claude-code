@@ -41,17 +41,31 @@ export class ClaudeMdChecker {
 
   private async runClaudeInit(cwd: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const claudeProcess = spawn('claude', ['/init'], {
+      const claudeProcess = spawn('claude', [], {
         cwd,
-        stdio: 'inherit',
+        stdio: ['pipe', 'pipe', 'pipe'],
         shell: true,
+      });
+
+      // Send /init command to stdin
+      claudeProcess.stdin?.write('/init\n');
+      claudeProcess.stdin?.end();
+
+      let output = '';
+
+      claudeProcess.stdout?.on('data', (data) => {
+        output += data.toString();
+      });
+
+      claudeProcess.stderr?.on('data', (data) => {
+        output += data.toString();
       });
 
       claudeProcess.on('exit', (code: number | null) => {
         if (code === 0 || code === null) {
           resolve();
         } else {
-          reject(new Error(`claude /init exited with code ${code}`));
+          reject(new Error(`claude /init failed with code ${code}: ${output}`));
         }
       });
 
